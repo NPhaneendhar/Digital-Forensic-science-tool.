@@ -1,0 +1,1335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>N.I.T.T.A.L.A - Forensic Suite v7.4 (AI Enhanced)</title>
+<meta name="description" content="A powerful AI tool for digital forensics. Analyze files, find hidden data, check passwords, and investigate network logs. Created by Phaneendhar, Nittala.">
+<meta name="keywords" content="forensic tool, NITTALA, digital investigation, AI forensics, file analysis, metadata">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/exifreader@4.13.0/dist/exif-reader.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://unpkg.com/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.js"></script>
+    <style>
+        :root {
+            --primary-bg: #0A0F1E;
+            --secondary-bg: #101827;
+            --card-bg: rgba(20, 28, 48, 0.6);
+            --border-color: rgba(63, 131, 248, 0.25);
+            --accent-primary: #3F83F8;
+            --accent-secondary: #00D1FF;
+            --text-primary: #F9FAFB;
+            --text-secondary: #B0B9C3;
+            --success: #10B981;
+            --warning: #F59E0B;
+            --danger: #EF4444;
+            --font-sans: 'Inter', sans-serif;
+            --font-mono: 'Roboto Mono', monospace;
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.2), 0 4px 6px -2px rgb(0 0 0 / 0.2);
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body {
+            background-color: var(--primary-bg);
+            background-image: radial-gradient(circle at 1px 1px, rgba(63, 131, 248, 0.08) 1px, transparent 0);
+            background-size: 2.5rem 2.5rem;
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            line-height: 1.6;
+        }
+        .container { width: 100%; max-width: 1600px; margin: 0 auto; padding: 2rem; }
+        header { text-align: center; margin-bottom: 3rem; animation: fadeIn 0.8s ease-out; }
+        h1 { font-size: 2.75rem; font-weight: 700; letter-spacing: 1px; background: linear-gradient(90deg, var(--accent-secondary), var(--accent-primary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-family: var(--font-mono); text-transform: uppercase; margin-bottom: 0.5rem; }
+        .acronym { font-size: 1.1rem; color: var(--accent-secondary); font-weight: 500; margin-bottom: 0.75rem; letter-spacing: 1px; font-family: var(--font-mono); }
+        .subtitle { font-size: 1.1rem; color: var(--text-secondary); max-width: 600px; margin: 0 auto; }
+
+        .main-layout { display: grid; grid-template-columns: repeat(12, 1fr); gap: 2rem; }
+        .tool-section { grid-column: span 12; }
+        @media (min-width: 1280px) { .tool-section { grid-column: span 9; } }
+        .sidebar-section { grid-column: span 12; }
+        @media (min-width: 1280px) { .sidebar-section { grid-column: span 3; } }
+
+        .tool-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 2rem; align-items: stretch; }
+        .tool-card {
+            position: relative;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 1rem;
+            box-shadow: var(--shadow-md);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            animation: fadeIn 0.5s ease-out forwards;
+            animation-delay: calc(var(--card-index) * 50ms);
+            opacity: 0;
+            overflow: hidden;
+        }
+        .tool-card:hover { transform: translateY(-5px); box-shadow: 0 0 25px rgba(63, 131, 248, 0.2), var(--shadow-lg); }
+        .tool-card-content { padding: 1.5rem; flex-grow: 1; display: flex; flex-direction: column; }
+        .tool-card h2 { font-size: 1.25rem; font-weight: 600; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.75rem; }
+        .tool-card h2 i { color: var(--accent-primary); }
+
+        .card-loader {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(11, 16, 33, 0.8); backdrop-filter: blur(4px);
+            display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 10;
+        }
+        .card-loader.active { display: flex; }
+        .card-loader span { margin-top: 1rem; font-family: var(--font-mono); }
+
+        .input-group { margin-bottom: 1rem; }
+        label { display: block; margin-bottom: 0.5rem; font-size: 0.875rem; font-weight: 500; color: var(--text-secondary); }
+        input, select, textarea { width: 100%; padding: 0.75rem 1rem; background: var(--secondary-bg); border: 1px solid var(--border-color); border-radius: 0.5rem; color: var(--text-primary); font-size: 0.9rem; transition: border-color 0.2s, box-shadow 0.2s; font-family: var(--font-sans); }
+        textarea { resize: vertical; min-height: 100px; font-family: var(--font-mono); }
+        input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent-primary); box-shadow: 0 0 0 3px rgba(63, 131, 248, 0.15); }
+        input:disabled, button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .btn-group { display: flex; gap: 0.75rem; margin-top: 1.25rem; }
+        button { background: var(--accent-primary); color: var(--text-primary); border: none; padding: 0.75rem 1.25rem; border-radius: 0.5rem; cursor: pointer; font-weight: 600; font-size: 0.9rem; transition: all 0.2s; flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
+        button:not(:disabled):hover { background: #2563EB; box-shadow: var(--shadow-md); transform: translateY(-2px); }
+        button.secondary { background: rgba(63, 131, 248, 0.1); color: var(--accent-primary); }
+        button.secondary:not(:disabled):hover { background: rgba(63, 131, 248, 0.2); }
+        .loading-spinner { width: 1.5em; height: 1.5em; border: 3px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin 0.6s linear infinite; }
+
+        .output { background: var(--secondary-bg); border: 1px solid var(--border-color); border-radius: 0.5rem; padding: 1rem; margin-top: 1.5rem; min-height: 80px; font-family: var(--font-mono); white-space: pre-wrap; word-wrap: break-word; color: var(--text-secondary); font-size: 0.85rem; line-height: 1.8; flex-grow: 1; overflow-x: auto; }
+        .output details { margin-top: 0.5rem; background: rgba(0,0,0,0.2); padding: 0.5rem; border-radius: 0.25rem; }
+        .output summary { cursor: pointer; color: var(--accent-secondary); }
+        .show-more-link { color: var(--accent-secondary); cursor: pointer; text-decoration: underline; font-style: italic; }
+        .interpretation { font-style: italic; margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed var(--border-color); color: var(--text-primary); font-size: 0.9rem; }
+        .interpretation ul { padding-left: 1.5rem; margin-top: 0.5rem; }
+        .interpretation li { margin-bottom: 0.5rem; }
+        
+        .chat-container { display: flex; flex-direction: column; height: 100%; max-height: 400px; flex-grow: 1; }
+        .chat-window { flex-grow: 1; overflow-y: auto; padding: 0.5rem; }
+        .chat-message { margin-bottom: 0.75rem; padding: 0.65rem 1rem; border-radius: 1rem; max-width: 90%; line-height: 1.5; font-size: 0.9rem; }
+        .user-message { background: var(--accent-primary); color: white; margin-left: auto; border-bottom-right-radius: 0.25rem; }
+        .ai-message { background: var(--secondary-bg); color: var(--text-primary); margin-right: auto; border-bottom-left-radius: 0.25rem; }
+        .ai-message ul { padding-left: 1.5rem; margin-top: 0.5rem; }
+        
+        .chat-input-area { display: flex; gap: 0.5rem; margin-top: 1rem; }
+        .ai-quick-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.75rem 0; }
+        .ai-quick-actions button { padding: 0.25rem 0.75rem; font-size: 0.75rem; flex: 0; }
+
+        .success { color: var(--success); } .warning { color: var(--warning); } .danger { color: var(--danger); } .info { color: var(--accent-secondary); }
+
+        .coc-container { max-height: 400px; overflow-y: auto; padding-right: 10px;}
+        .coc-entry { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0.5rem; border-bottom: 1px solid var(--border-color); cursor: pointer; transition: background-color 0.2s; }
+        .coc-entry:hover { background-color: rgba(63, 131, 248, 0.05); }
+        .coc-status { flex-shrink: 0; width: 10px; height: 10px; border-radius: 50%; }
+        .status-high { background: var(--danger); } .status-medium { background: var(--warning); } .status-low { background: var(--success); }
+        
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.8); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: var(--secondary-bg); border-radius: 1rem; padding: 2rem; max-width: 800px; width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: var(--shadow-lg); border: 1px solid var(--border-color); position: relative;}
+        .modal-close { position: absolute; top: 1rem; right: 1rem; background: none; border: none; color: var(--text-secondary); font-size: 1.5rem; cursor: pointer; }
+        
+        .toggle-switch { display: flex; align-items: center; justify-content: space-between; margin-top: 1.5rem; }
+        .toggle-switch label { margin-bottom: 0; }
+        .switch { position: relative; display: inline-block; width: 50px; height: 28px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 28px; }
+        .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--accent-primary); }
+        input:checked + .slider:before { transform: translateX(22px); }
+        
+        .credits-card p { font-size: 0.9rem; color: var(--text-secondary); }
+        .credits-card strong { color: var(--text-primary); font-weight: 500; }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>N.I.T.T.A.L.A v7.4</h1>
+            <div class="acronym">Node-based Investigative Toolkit for Trace Analysis and Log Auditing</div>
+            <p class="subtitle">A Fully-Integrated AI Suite for Digital Investigations, Advanced Analysis, and Legal Reporting.</p>
+        </header>
+
+        <main class="main-layout">
+            <section class="tool-section">
+                <div class="tool-grid">
+                    <!-- AI Forensic Analyst Card -->
+                    <div class="tool-card" style="--card-index: 1;">
+                        <div class="tool-card-content">
+                            <h2><i class="fas fa-brain"></i> AI Forensic Analyst</h2>
+                            <div class="chat-container">
+                                <div class="chat-window" id="ai-chat-window">
+                                    <div class="chat-message ai-message">Welcome. I am the N.I.T.T.A.L.A. AI. How can I assist your investigation?</div>
+                                </div>
+                                <div class="ai-quick-actions">
+                                    <button class="secondary" onclick="quickAction('Summarize findings')">Summarize</button>
+                                    <button class="secondary" onclick="quickAction('Suggest next steps')">Suggest Next Steps</button>
+                                    <button class="secondary" onclick="quickAction('Explain file entropy')">Explain Entropy</button>
+                                    <button class="secondary" onclick="addAiSummaryToReport()" title="Add last AI summary to the PDF report"><i class="fas fa-file-import"></i> Add to Report</button>
+                                </div>
+                                <div class="chat-input-area">
+                                    <input type="text" id="ai-chat-input" placeholder="Chat with the AI..." onkeydown="if(event.key==='Enter') sendChatMessage()">
+                                    <button id="ai-chat-send-btn" onclick="sendChatMessage()" title="Send"><i class="fas fa-paper-plane"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- File Integrity & Threat Scanner Card -->
+                    <div id="integrity-card" class="tool-card" style="--card-index: 2;">
+                        <div class="card-loader"><div class="loading-spinner"></div><span>Processing...</span></div>
+                        <div class="tool-card-content">
+                            <h2><i class="fas fa-shield-virus"></i> File Integrity & Threat Scanner</h2>
+                            <div class="input-group">
+                                <label for="file-upload">Select File for Analysis</label>
+                                <input type="file" id="file-upload">
+                            </div>
+                            <div class="btn-group">
+                                <button id="scan-btn" onclick="runAnalysis('integrity-card', generateHash)"><i class="fas fa-broadcast-tower"></i> Full Scan</button>
+                            </div>
+                            <div id="hash-output" class="output">Select a file to automatically generate its SHA-256 hash. Then, click "Full Scan".</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Metadata Analyzer Card -->
+                    <div id="metadata-card" class="tool-card" style="--card-index: 3;">
+                        <div class="card-loader"><div class="loading-spinner"></div><span>Analyzing...</span></div>
+                        <div class="tool-card-content">
+                            <h2><i class="fas fa-camera-retro"></i> Metadata Analyzer</h2>
+                            <div class="input-group">
+                                <label for="photo-upload">Select Image/File</label>
+                                <input type="file" id="photo-upload" accept="image/*,video/*,.pdf,.doc,.docx">
+                            </div>
+                            <div class="btn-group">
+                                <button id="meta-btn" onclick="runAnalysis('metadata-card', analyzeMetadata)"><i class="fas fa-search-dollar"></i> Analyze Metadata</button>
+                                <button id="meta-ai-btn" class="secondary" onclick="getMetadataAIInsights()" style="display: none;">✨ Get AI Insights</button>
+                            </div>
+                            <div id="metadata-output" class="output">Upload a file to perform a comprehensive metadata deep-dive.</div>
+                        </div>
+                    </div>
+
+                    <!-- Steganography Analyzer Card -->
+                    <div id="stego-card" class="tool-card" style="--card-index: 4;">
+                        <div class="card-loader"><div class="loading-spinner"></div><span>Scanning...</span></div>
+                        <div class="tool-card-content">
+                            <h2><i class="fas fa-eye-slash"></i> Steganography Analyzer</h2>
+                             <div class="input-group">
+                                <label for="steg-file">Upload Image (PNG recommended)</label>
+                                <input type="file" id="steg-file" accept="image/png, image/bmp, image/jpeg">
+                            </div>
+                            <div class="btn-group">
+                                <button id="stego-btn" onclick="runAnalysis('stego-card', analyzeSteganography)"><i class="fas fa-search-plus"></i> LSB Scan</button>
+                            </div>
+                            <div id="steg-output" class="output">Upload an image to perform a Least-Significant-Bit (LSB) analysis.</div>
+                        </div>
+                    </div>
+
+                    <!-- Password Strength Card -->
+                     <div id="password-card" class="tool-card" style="--card-index: 5;">
+                        <div class="card-loader"><div class="loading-spinner"></div><span>Analyzing...</span></div>
+                        <div class="tool-card-content">
+                            <h2><i class="fas fa-key"></i> Password Audit</h2>
+                            <div class="input-group">
+                                <label for="password-input">Enter Password</label>
+                                <input type="password" id="password-input" placeholder="Enter password for full analysis...">
+                            </div>
+                            <div class="btn-group">
+                                <button id="pass-btn" onclick="runAnalysis('password-card', analyzePassword)"><i class="fas fa-bolt"></i> Full Analysis</button>
+                            </div>
+                            <div id="password-output" class="output">Enter a password and run analysis to check for breach status and crack time.</div>
+                        </div>
+                    </div>
+
+                    <!-- Network Log Analyzer Card -->
+                    <div id="network-card" class="tool-card" style="--card-index: 6;">
+                        <div class="card-loader"><div class="loading-spinner"></div><span>Analyzing...</span></div>
+                        <div class="tool-card-content">
+                            <h2><i class="fas fa-network-wired"></i> Advanced Network Log Analyzer</h2>
+                            <div class="input-group">
+                                <label for="network-input">Paste System or Network Logs</label>
+                                <textarea id="network-input" placeholder="Paste logs (e.g., auth.log, firewall, web server) here..."></textarea>
+                            </div>
+                            <div class="btn-group">
+                                <button id="net-btn" onclick="runAnalysis('network-card', analyzeNetworkAdvanced)"><i class="fas fa-wave-square"></i> Advanced Analysis</button>
+                                <button id="net-ai-btn" class="secondary" onclick="getNetworkAIInsights()" style="display: none;">✨ Explain Threats with AI</button>
+                            </div>
+                            <div id="network-output" class="output">The advanced engine correlates events to identify attack chains and calculates an overall threat score.</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <aside class="sidebar-section">
+                <!-- Report Generation Card -->
+                <div class="tool-card" style="--card-index: 7;">
+                    <div class="tool-card-content">
+                        <h2><i class="fas fa-file-invoice"></i> Report Generation</h2>
+                        <div class="input-group">
+                            <label for="case-name">Case Name / ID</label>
+                            <input type="text" id="case-name" placeholder="e.g., Case-2025-001">
+                        </div>
+                         <div class="input-group">
+                            <label for="investigator-name">Investigator Name</label>
+                            <input type="text" id="investigator-name" value="Phaneendhar, Nittala" placeholder="John Doe">
+                        </div>
+                        <div class="input-group">
+                            <label for="org-name">Organization Name</label>
+                            <input type="text" id="org-name" placeholder="e.g., Forensic Unit">
+                        </div>
+                        <div class="input-group">
+                            <label for="case-type">Case Type</label>
+                            <input type="text" id="case-type" placeholder="e.g., Data Breach Investigation">
+                        </div>
+                         <div class="input-group">
+                            <label for="pdf-password">PDF Encryption Password (AES)</label>
+                            <input type="password" id="pdf-password" placeholder="Leave blank for no encryption...">
+                        </div>
+                        <div class="toggle-switch">
+                            <label for="court-mode">Courtroom-Ready Mode</label>
+                            <label class="switch">
+                                <input type="checkbox" id="court-mode">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div class="btn-group">
+                            <button onclick="exportToPDF()"><i class="fas fa-file-pdf"></i> Export Secure PDF</button>
+                        </div>
+                    </div>
+                </div>
+                <!-- Chain of Custody Card -->
+                <div class="tool-card" style="margin-top: 2rem; --card-index: 8;">
+                    <div class="tool-card-content">
+                        <h2><i class="fas fa-book"></i> Chain of Custody Log</h2>
+                        <div id="coc-log" class="coc-container"></div>
+                    </div>
+                </div>
+                <!-- Credits Card -->
+                <div class="tool-card credits-card" style="margin-top: 2rem; --card-index: 9;">
+                    <div class="tool-card-content">
+                        <h2><i class="fas fa-user-graduate"></i> Credits</h2>
+                        <p><strong>Developed By:</strong> Phaneendhar, Nittala</p>
+                        <p><strong>Education:</strong> B.Sc. Forensic Science</p>
+                        <p><strong>University:</strong> Centurion University of Technology and Management (Andhra Pradesh)</p>
+                    </div>
+                </div>
+            </aside>
+        </main>
+    </div>
+    
+    <div class="modal-overlay" id="coc-modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal()">×</button>
+            <h3 class="modal-title" id="modal-title"></h3>
+            <div class="modal-body" id="modal-body"></div>
+        </div>
+    </div>
+    
+    <canvas id="chart-canvas" width="400" height="200" style="display:none;"></canvas>
+
+    <script>
+        // --- GLOBAL STATE & INITIALIZATION ---
+        let analysisResults = {};
+        let chainOfCustody = [];
+        let aiSummaryForReport = "";
+        let lastAiResponse = "";
+        let chatHistory = [];
+
+        const threatDatabase = {
+            "275a021bbfb6489e54d471899f7db9d1663fc695ec2fe2a2c4538aabf651fd0f": "WannaCry Ransomware",
+            "e889544aff85ffaf8b0d0da705105dee7c97fe266fee5ae42d97b3af8d372185": "Emotet Trojan",
+            "1a1a9999a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1": "EICAR Test File"
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            resetSession();
+            document.getElementById('file-upload').addEventListener('change', handleFileIntegritySelection);
+            document.getElementById('photo-upload').addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if(file) {
+                    document.querySelector('#metadata-card .output').innerHTML = `File '${file.name}' selected. Click "Analyze Metadata" to process.`;
+                }
+            });
+        });
+
+        function resetSession() {
+            analysisResults = { sessionId: `NITTALA-${Math.floor(1000 + Math.random() * 9000)}` };
+            chainOfCustody = [];
+            chatHistory = [{
+                role: "user",
+                parts: [{ text: "You are a world-class digital forensics expert and AI assistant called N.I.T.T.A.L.A. Your purpose is to assist users in analyzing digital evidence. Be concise, accurate, and provide actionable advice. When asked to summarize, use the provided analysis data. Do not mention you are a language model." }]
+            }, {
+                role: "model",
+                parts: [{ text: "Understood. I am the N.I.T.T.A.L.A. AI, ready to assist with forensic analysis." }]
+            }];
+            document.getElementById('case-name').value = '';
+            document.getElementById('org-name').value = '';
+            document.getElementById('case-type').value = '';
+            document.getElementById('pdf-password').value = '';
+            addCoCEntry('Session Started', 'System', 'low', `New investigation session initialized.`);
+        }
+
+        async function runAnalysis(cardId, analysisFn) {
+            const loader = document.querySelector(`#${cardId} .card-loader`);
+            const button = document.querySelector(`#${cardId} button`);
+            loader.classList.add('active');
+            if(button) button.disabled = true;
+            
+            try {
+                await new Promise(res => setTimeout(res, 50));
+                await analysisFn();
+            } catch (error) {
+                console.error(`Analysis failed for ${cardId}:`, error);
+                const output = document.querySelector(`#${cardId} .output`);
+                if(output) output.innerHTML = `<span class="danger">An unexpected error occurred: ${error.message}</span>`;
+            } finally {
+                loader.classList.remove('active');
+                if(button) button.disabled = false;
+            }
+        }
+
+        // --- GEMINI API INTEGRATION ---
+        async function callGemini(prompt) {
+            // IMPORTANT: This key is intentionally blank.
+            // For local use, you must get your own API key from Google AI Studio and place it here.
+            const apiKey = "AIzaSyAOVASExFPEm5pzMkE19q9f5Ixi8gQUVe4"; 
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+            
+            chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+
+            const payload = { contents: chatHistory };
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    // Enhanced error handling
+                    if (response.status === 403) {
+                         return "Error: API call failed with status 403 (Forbidden). This usually means the API key is missing, invalid, or has not been enabled for the Google AI API.";
+                    }
+                    throw new Error(`API call failed with status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    const text = result.candidates[0].content.parts[0].text;
+                    chatHistory.push({ role: "model", parts: [{ text: text }] });
+                    return text;
+                } else {
+                    console.error("Unexpected API response structure:", result);
+                    return "Error: Received an invalid response from the AI. Please check the console.";
+                }
+            } catch (error) {
+                console.error("Error calling Gemini API:", error);
+                return `Error communicating with the AI service: ${error.message}`;
+            }
+        }
+
+
+        // --- AI CHATBOT IMPLEMENTATION ---
+        function quickAction(message) {
+             document.getElementById('ai-chat-input').value = message;
+            sendChatMessage();
+        }
+
+        function addAiSummaryToReport() {
+            if (lastAiResponse) {
+                aiSummaryForReport = lastAiResponse;
+                alert("AI summary has been staged and will be added to the Executive Summary in the next PDF report.");
+            } else {
+                alert("No AI summary is available. Please ask the AI to summarize the findings first.");
+            }
+        }
+
+        async function sendChatMessage() {
+            const input = document.getElementById('ai-chat-input');
+            const sendBtn = document.getElementById('ai-chat-send-btn');
+            const message = input.value.trim();
+            if (!message) return;
+
+            appendChatMessage(message, 'user');
+            input.value = '';
+            input.disabled = true;
+            sendBtn.disabled = true;
+            sendBtn.innerHTML = `<div class="loading-spinner" style="width: 1em; height: 1em; border-width: 2px;"></div>`;
+
+            let prompt = message;
+            if (message.toLowerCase().includes('summarize') || message.toLowerCase().includes('suggest')) {
+                prompt += `\n\nHere is the current analysis context in JSON format:\n${JSON.stringify(analysisResults)}`;
+            }
+            
+            const aiResponse = await callGemini(prompt);
+            lastAiResponse = aiResponse; 
+            appendChatMessage(aiResponse, 'ai');
+
+            input.disabled = false;
+            sendBtn.disabled = false;
+            sendBtn.innerHTML = `<i class="fas fa-paper-plane"></i>`;
+        }
+
+        function appendChatMessage(message, sender) {
+            const chatWindow = document.getElementById('ai-chat-window');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `chat-message ${sender}-message`;
+            // Use innerHTML to correctly render potential HTML tags from the AI response
+            messageDiv.innerHTML = message; 
+            chatWindow.appendChild(messageDiv);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+
+        // --- TOOL FUNCTIONS ---
+
+        async function handleFileIntegritySelection(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const output = document.getElementById('hash-output');
+            output.innerHTML = `<span class="info">Calculating baseline hash for ${file.name}...</span>`;
+            
+            const buffer = await file.arrayBuffer();
+            const wordArray = CryptoJS.lib.WordArray.create(new Uint8Array(buffer));
+            const hash = CryptoJS.SHA256(wordArray).toString();
+
+            analysisResults.baselineHash = { fileName: file.name, hash };
+            addCoCEntry('Evidence Acquired', file.name, 'low', `File loaded. Baseline SHA-256: ${hash}`);
+            output.innerHTML = `--- Baseline Hash Generated ---\nFilename: ${file.name}\nSHA-256: <span class="info">${hash}</span>\n\nReady for full scan.`;
+        }
+        
+        async function generateHash() {
+            const fileInput = document.getElementById('file-upload');
+            const output = document.getElementById('hash-output');
+            if (!fileInput.files[0]) {
+                output.innerHTML = '<span class="danger">Please select a file first.</span>';
+                return;
+            }
+            const file = fileInput.files[0];
+            const buffer = await file.arrayBuffer();
+            const bytes = new Uint8Array(buffer);
+            const wordArray = CryptoJS.lib.WordArray.create(bytes);
+            
+            // Calculate multiple hashes
+            const hash_sha256 = CryptoJS.SHA256(wordArray).toString();
+            const hash_sha1 = CryptoJS.SHA1(wordArray).toString();
+            const hash_md5 = CryptoJS.MD5(wordArray).toString();
+
+            const entropy = calculateEntropy(bytes);
+            const fileType = getFileType(bytes);
+            const threatInfo = threatDatabase[hash_sha256];
+            const isMalicious = !!threatInfo;
+
+            let resultHTML = `--- File Integrity & Threat Report ---\n`;
+            resultHTML += `Filename:      ${file.name}\n`;
+            resultHTML += `File Size:     ${(file.size / 1024).toFixed(2)} KB\n`;
+            resultHTML += `Identified Type: ${fileType}\n\n`;
+            resultHTML += `--- Cryptographic Hashes ---\n`;
+            resultHTML += `MD5:    ${hash_md5}\n`;
+            resultHTML += `SHA-1:  ${hash_sha1}\n`;
+            resultHTML += `SHA-256: <span class="info">${hash_sha256}</span>\n\n`;
+            resultHTML += `--- Threat Intelligence Analysis ---\n`;
+            if (isMalicious) {
+                resultHTML += `Status: <span class="danger">KNOWN THREAT DETECTED</span>\n`;
+                resultHTML += `Match:  ${threatInfo}\n\n`;
+            } else {
+                resultHTML += `Status: <span class="success">No known threats found in database.</span>\n\n`;
+            }
+            const entropyStatus = entropy > 7.5 ? `<span class="danger">HIGH</span>` : (entropy < 6 ? `<span class="warning">LOW</span>` : `<span class="success">Normal</span>`);
+            resultHTML += `--- Entropy Analysis ---\n`;
+            resultHTML += `Shannon Entropy: ${entropy.toFixed(4)} / 8.0\n`;
+            resultHTML += `Assessment:      ${entropyStatus}`;
+            
+            resultHTML += `<div class="interpretation"><strong>Interpretation:</strong> A ${entropyStatus.toLowerCase()} entropy level combined with a ${isMalicious ? "positive" : "negative"} threat match suggests this file is ${isMalicious ? "highly suspicious and likely malicious" : "likely benign, but high entropy could still warrant a manual check for packers"}.</div>`;
+
+            output.innerHTML = resultHTML;
+            analysisResults.fileHash = { fileName: file.name, hashes: { md5: hash_md5, sha1: hash_sha1, sha256: hash_sha256 }, isMalicious, threatName: threatInfo || 'N/A', entropy: entropy, fileType, fileSize: file.size };
+            addCoCEntry('File Threat Scan', file.name, isMalicious ? 'high' : 'low', `Scan complete. Threat status: ${isMalicious ? 'Positive' : 'Negative'}.`);
+        }
+        
+        function calculateEntropy(data) {
+            if (data.length === 0) return 0;
+            const map = {};
+            for (const byte of data) { map[byte] = (map[byte] || 0) + 1; }
+            let entropy = 0;
+            const len = data.length;
+            for (const byte in map) {
+                const p = map[byte] / len;
+                entropy -= p * Math.log2(p);
+            }
+            return entropy;
+        }
+
+        function getFileType(bytes) {
+            const signatures = {
+                "FFD8FFE0": "JPEG image", "89504E47": "PNG image", "47494638": "GIF image",
+                "25504446": "PDF document", "504B0304": "ZIP archive", "4D5A": "Windows PE file (EXE/DLL)"
+            };
+            const hex = Array.from(bytes.slice(0, 4)).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join('');
+            for (const sig in signatures) {
+                if (hex.startsWith(sig)) return signatures[sig];
+            }
+            return "Unknown / Generic data";
+        }
+
+        async function analyzeMetadata() {
+            const fileInput = document.getElementById('photo-upload');
+            const output = document.getElementById('metadata-output');
+            const aiBtn = document.getElementById('meta-ai-btn');
+            aiBtn.style.display = 'none'; 
+
+            if (!fileInput.files[0]) {
+                output.innerHTML = '<span class="danger">Please select a file.</span>';
+                return;
+            }
+            const file = fileInput.files[0];
+            addCoCEntry('Metadata Analysis', file.name, 'low', 'Initiated metadata extraction.');
+
+            try {
+                const tags = await ExifReader.load(file, { expanded: true });
+
+                if (Object.keys(tags).length === 0 || (Object.keys(tags).length === 1 && tags.file)) {
+                    output.innerHTML = `<span class="warning">No significant EXIF/metadata found for ${file.name}.</span>`;
+                    addCoCEntry('Metadata Analysis', file.name, 'medium', `No metadata tags found.`);
+                    return;
+                }
+
+                let allEntries = [];
+                let keyFindings = {};
+
+                const findKeyFindings = (key, value) => {
+                    const lowerKey = key.toLowerCase();
+                    if (lowerKey.includes('gpslatitude') || lowerKey.includes('gpslongitude')) keyFindings['GPS'] = 'Coordinates Found';
+                    if (lowerKey.includes('datetimeoriginal')) keyFindings['Timestamp'] = value;
+                    if (lowerKey.includes('software')) keyFindings['Software'] = value;
+                    if (lowerKey.includes('make') || lowerKey.includes('model')) keyFindings['Device'] = `${keyFindings['Device'] || ''} ${value}`.trim();
+                    if (lowerKey.includes('serialnumber')) keyFindings['Device Serial'] = value;
+                    if (lowerKey.includes('author') || lowerKey.includes('creator')) keyFindings['Author'] = value;
+                };
+                
+                let reportContent = `--- Full Metadata Report: ${file.name} ---\n\n`;
+
+                for (const groupName in tags) {
+                    if (!tags[groupName] || typeof tags[groupName] !== 'object' || groupName === 'thumbnail') continue;
+                    
+                    const groupHeader = `--- ${groupName.charAt(0).toUpperCase() + groupName.slice(1)} ---\n`;
+                    let groupContent = '';
+
+                    for (const tagName in tags[groupName]) {
+                        const tag = tags[groupName][tagName];
+                        if (tag && typeof tag.description !== 'undefined') {
+                            const value = tag.description;
+                            allEntries.push({ group: groupName, key: tagName, value });
+                            findKeyFindings(tagName, value);
+
+                            if (tagName.toLowerCase() === 'padding' || (typeof value === 'string' && value.length > 200)) {
+                                groupContent += `${tagName.padEnd(30)}: [Large data block hidden]\n`;
+                            } else {
+                                groupContent += `${tagName.padEnd(30)}: ${value}\n`;
+                            }
+                        }
+                    }
+                    if (groupContent) {
+                        reportContent += groupHeader + groupContent + '\n';
+                    }
+                }
+
+                let finalHTML = '';
+                if (Object.keys(keyFindings).length > 0) {
+                    finalHTML += `--- Key Forensic Findings ---\n`;
+                    for(const key in keyFindings) {
+                        finalHTML += `${key.padEnd(20)}: ${keyFindings[key]}\n`;
+                    }
+                    finalHTML += '\n';
+                } else {
+                     finalHTML += `--- Key Forensic Findings ---\nNo common forensic artifacts identified.\n\n`;
+                }
+
+                finalHTML += reportContent;
+                
+                output.innerHTML = finalHTML;
+                analysisResults.metadata = { fileName: file.name, data: allEntries, totalTags: allEntries.length, keyFindings };
+                addCoCEntry('Metadata Extracted', file.name, 'low', `Extracted ${allEntries.length} total tags.`);
+                aiBtn.style.display = 'flex';
+
+            } catch (error) {
+                console.error("Metadata analysis error:", error);
+                output.innerHTML = `<span class="danger">Error analyzing metadata: ${error.message}.</span>`;
+                addCoCEntry('Metadata Error', file.name, 'medium', `Error: ${error.message}`);
+            }
+        }
+
+        async function getMetadataAIInsights() {
+            if (!analysisResults.metadata || !analysisResults.metadata.keyFindings) {
+                alert("Please analyze a file first.");
+                return;
+            }
+
+            const aiBtn = document.getElementById('meta-ai-btn');
+            aiBtn.disabled = true;
+            aiBtn.innerHTML = `<div class="loading-spinner" style="width: 1em; height: 1em; border-width: 2px;"></div>`;
+
+            const prompt = `As a digital forensics expert, provide a concise narrative about the potential history and significance of a file based on these key metadata findings. What can you infer? What are the next logical steps for an investigator? Be direct and clear. \n\nKey Findings:\n${JSON.stringify(analysisResults.metadata.keyFindings, null, 2)}`;
+            
+            const aiResponse = await callGemini(prompt);
+
+            const output = document.getElementById('metadata-output');
+            const interpretationDiv = document.createElement('div');
+            interpretationDiv.className = 'interpretation';
+            interpretationDiv.innerHTML = `<strong>✨ AI Insights:</strong><br>${aiResponse.replace(/\n/g, '<br>')}`;
+            output.appendChild(interpretationDiv);
+
+            aiBtn.disabled = false;
+            aiBtn.innerHTML = `✨ Get AI Insights`;
+        }
+
+        async function analyzeSteganography() {
+            const fileInput = document.getElementById('steg-file');
+            const output = document.getElementById('steg-output');
+            if (!fileInput.files[0]) {
+                output.innerHTML = '<span class="danger">Please select an image.</span>';
+                return;
+            }
+            const file = fileInput.files[0];
+            addCoCEntry('Stego Analysis', file.name, 'medium', `Initiated LSB analysis.`);
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+                    ctx.drawImage(img, 0, 0);
+                    
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+                    let lsbBytes = [];
+                    let currentByte = 0;
+                    let bitCount = 0;
+
+                    for (let i = 3; i < imageData.length; i += 4) {
+                        currentByte = (currentByte << 1) | (imageData[i] & 1);
+                        bitCount++;
+                        if (bitCount === 8) {
+                            lsbBytes.push(currentByte);
+                            currentByte = 0;
+                            bitCount = 0;
+                        }
+                    }
+
+                    const entropy = calculateEntropy(new Uint8Array(lsbBytes));
+                    const found = entropy > 4.0;
+                    let resultText = `--- LSB Steganography Report: ${file.name} ---\n\n`;
+                    resultText += `Image Dimensions: ${img.width}x${img.height}\n`;
+                    resultText += `LSB Alpha Channel Entropy: ${entropy.toFixed(4)}\n\n`;
+                    
+                    if (found) {
+                        resultText += `<span class="danger">HIGH PROBABILITY OF HIDDEN DATA</span>\n`;
+                        resultText += `<div class="interpretation"><strong>Interpretation:</strong> The entropy of the least-significant bits of the alpha channel is abnormally high. This is a strong indicator that the channel is not uniform and has likely been modified to carry a hidden data payload.</div>`;
+                    } else {
+                        resultText += `<span class="success">No evidence of LSB steganography found.</span>\n`;
+                        resultText += `<div class="interpretation"><strong>Interpretation:</strong> The LSB entropy is low, which is consistent with an unaltered image file where the alpha channel is uniform (e.g., fully opaque).</div>`;
+                    }
+                    
+                    output.innerHTML = resultText;
+                    analysisResults.steganography = { fileName: file.name, method: 'LSB Alpha', riskLevel: found ? 'High' : 'Low', entropy: entropy.toFixed(4), found };
+                    addCoCEntry('Stego Scan Complete', file.name, found ? 'high' : 'low', `${found ? 'Payload detected' : 'No payload found'}.`);
+                }
+                img.onerror = () => {
+                     output.innerHTML = `<span class="danger">Could not load the selected file as an image.</span>`;
+                }
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        async function analyzePassword() {
+            const password = document.getElementById('password-input').value;
+            const output = document.getElementById('password-output');
+            if (!password) {
+                output.innerHTML = '<span class="danger">Please enter a password.</span>'; return;
+            }
+            addCoCEntry('Password Analysis', '********', 'medium', 'Initiated strength and breach analysis.');
+            
+            const scoreData = calculatePasswordScore(password);
+            const entropy = Math.log2(scoreData.variations) * password.length;
+            const timeToCrack = formatTime((Math.pow(2, entropy) / 1e11) * 0.5);
+            const strengthLevels = ['Very Weak', 'Weak', 'Moderate', 'Strong', 'Very Strong'];
+            const strengthColors = ['danger', 'danger', 'warning', 'success', 'success'];
+            const strength = strengthLevels[scoreData.score];
+            const strengthColor = strengthColors[scoreData.score];
+            const isBreached = password.length < 10 && Math.random() > 0.5;
+
+            let result = `--- Password Strength & Breach Report ---\n`;
+            result += `Strength:            <span class="${strengthColor}">${strength}</span>\n`;
+            result += `Password Entropy:    ${entropy.toFixed(2)} bits\n`;
+            result += `Est. Time to Crack:  <span class="${timeToCrack.includes('instant') ? 'danger' : 'success'}">${timeToCrack}</span>\n\n`;
+            result += `--- Breach Corpus Analysis (Simulated) ---\n`;
+            result += `Status: ${isBreached ? '<span class="danger">COMPROMISED</span>' : '<span class="success">CLEAN</span>'}\n\n`;
+
+            if (scoreData.suggestions.length > 0) {
+                result += `--- Recommendations ---\n`;
+                scoreData.suggestions.forEach(sug => result += `<span class="warning">- ${sug}</span>\n`);
+            }
+            
+            result += `<div class="interpretation"><strong>Interpretation:</strong> This password has an entropy of ${entropy.toFixed(2)} bits. The estimated crack time is based on an offline attack using modern GPU hardware (approx. 100 Giga-hashes/sec). A status of 'COMPROMISED' indicates this password may exist in public breach lists, making it very unsafe.</div>`;
+
+            output.innerHTML = result;
+            analysisResults.password = { isBreached, timeToCrack, strength: strength, entropyBits: entropy.toFixed(2), suggestions: scoreData.suggestions };
+            addCoCEntry('Password Scan Complete', '********', isBreached ? 'high' : 'low', `Breach status: ${isBreached ? 'Compromised' : 'Clean'}.`);
+        }
+
+        function calculatePasswordScore(password) {
+            let variations = 1;
+            let suggestions = [];
+            
+            if (/[a-z]/.test(password)) { variations += 26; } else { suggestions.push("Add lowercase letters."); }
+            if (/[A-Z]/.test(password)) { variations += 26; } else { suggestions.push("Add uppercase letters."); }
+            if (/\d/.test(password)) { variations += 10; } else { suggestions.push("Add numbers."); }
+            if (/[^a-zA-Z\d]/.test(password)) { variations += 32; } else { suggestions.push("Add symbols (e.g., !@#$)."); }
+            if (password.length < 12) { suggestions.push(`Increase length to at least 12 characters (currently ${password.length}).`); }
+            
+            let score = 0;
+            if (password.length >= 12 && variations >= 70) score = 4;
+            else if (password.length >= 10 && variations >= 50) score = 3;
+            else if (password.length >= 8 && variations >= 26) score = 2;
+            else if (password.length >= 6) score = 1;
+            else score = 0;
+
+            return { score, variations, suggestions };
+        }
+
+        function formatTime(seconds) {
+            if (seconds < 1e-6) return "instantly";
+            if (seconds < 60) return `${seconds.toPrecision(2)} seconds`;
+            if (seconds < 3600) return `${(seconds / 60).toPrecision(2)} minutes`;
+            if (seconds < 86400) return `${(seconds / 3600).toPrecision(2)} hours`;
+            if (seconds < 31536000) return `${(seconds / 86400).toPrecision(2)} days`;
+            const years = seconds / 31536000;
+            if (years > 1e12) return "trillions of years";
+            if (years > 1e9) return `${(years / 1e9).toPrecision(3)} billion years`;
+            if (years > 1e6) return `${(years / 1e6).toPrecision(3)} million years`;
+            if (years > 1000) return `${(years / 1000).toPrecision(3)} thousand years`;
+            return `${years.toPrecision(3)} years`;
+        }
+
+        // --- ADVANCED NETWORK LOG ANALYZER ---
+        async function analyzeNetworkAdvanced() {
+            const input = document.getElementById('network-input').value;
+            const output = document.getElementById('network-output');
+            const aiBtn = document.getElementById('net-ai-btn');
+            aiBtn.style.display = 'none';
+
+            if (!input) {
+                output.innerHTML = '<span class="danger">Please paste log data.</span>'; return;
+            }
+            addCoCEntry('Advanced Log Analysis', 'Pasted Data', 'medium', 'Initiated contextual threat analysis.');
+
+            const lines = input.split('\n').filter(line => line.trim() !== '');
+            
+            const sqlInjectionPattern = new RegExp('(union|select|insert|update|delete|drop|--|#|/\\*)', 'i');
+
+            const patterns = {
+                'Failed Login': { pattern: /failed password for(?: invalid user)? (\S+)/i, score: 1, type: 'auth_fail', extracts: { user: 1, ip: /from (\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/ } },
+                'Successful Login': { pattern: /accepted password for (\S+)/i, score: 0, type: 'auth_success', extracts: { user: 1, ip: /from (\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/ } },
+                'SSH Login': { pattern: /accepted publickey for (\S+)/i, score: 0, type: 'auth_success', extracts: { user: 1, ip: /from (\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/ } },
+                'Sudo Command': { pattern: /sudo: \s*(\S+)\s*: TTY=.* PWD=.* USER=root COMMAND=(.*)/i, score: 3, type: 'priv_esc', extracts: { user: 1, command: 2 } },
+                'SQL Injection Attempt': { pattern: sqlInjectionPattern, score: 10, type: 'web_attack' },
+                'Directory Traversal': { pattern: /(\.\.\/|\.\.\\|etc\/passwd)/i, score: 10, type: 'web_attack' },
+                'Suspicious User Agent': { pattern: /" (curl|wget|python|nmap|sqlmap|masscan)/i, score: 4, type: 'recon' },
+                'Web Error': { pattern: /" (404|403|500) \d+/i, score: 1, type: 'web_error' }
+            };
+
+            let events = [];
+            lines.forEach((line, index) => {
+                for (const [name, p] of Object.entries(patterns)) {
+                    const match = line.match(p.pattern);
+                    if (match) {
+                        let details = { name, line: index + 1, score: p.score, type: p.type, content: line };
+                        if (p.extracts) {
+                            for (const [key, extractor] of Object.entries(p.extracts)) {
+                                if (typeof extractor === 'number') {
+                                    details[key] = match[extractor];
+                                } else {
+                                    const detailMatch = line.match(extractor);
+                                    if (detailMatch) details[key] = detailMatch[1];
+                                }
+                            }
+                        }
+                        events.push(details);
+                        break;
+                    }
+                }
+            });
+
+            let threats = [];
+            const loginFails = events.filter(e => e.type === 'auth_fail');
+            const failsByIp = loginFails.reduce((acc, e) => {
+                if (e.ip) {
+                    acc[e.ip] = (acc[e.ip] || 0) + 1;
+                }
+                return acc;
+            }, {});
+
+            for (const [ip, count] of Object.entries(failsByIp)) {
+                if (count >= 5) {
+                    const successAfter = events.find(e => e.type === 'auth_success' && e.ip === ip && e.line > loginFails.find(f => f.ip === ip).line);
+                    const risk = successAfter ? 'CRITICAL' : 'High';
+                    const score = successAfter ? 25 : 15;
+                    threats.push({
+                        name: `Brute-Force Attack${successAfter ? ' (Successful)' : ''}`,
+                        risk, score,
+                        details: `Detected ${count} failed login attempts from IP ${ip}, ${successAfter ? 'followed by a successful login.' : 'potentially ongoing.'}`
+                    });
+                }
+            }
+            
+            const successLogins = events.filter(e => e.type === 'auth_success');
+            for (const login of successLogins) {
+                const subsequentCommands = events.filter(e => e.type === 'priv_esc' && e.user === login.user && e.line > login.line);
+                if (subsequentCommands.length > 0) {
+                    threats.push({
+                        name: 'Suspicious Post-Login Activity',
+                        risk: 'High', score: 20,
+                        details: `User '${login.user}' logged in from ${login.ip} and then executed ${subsequentCommands.length} privileged command(s), starting with: ${subsequentCommands[0].command}`
+                    });
+                }
+            }
+
+            events.filter(e => e.score >= 10).forEach(e => {
+                threats.push({ name: e.name, risk: 'High', score: e.score, details: `Detected on line ${e.line}: ${e.content.substring(0, 100)}...` });
+            });
+
+            const totalScore = threats.reduce((sum, t) => sum + t.score, 0);
+            let threatLevel, threatColor;
+            if (totalScore >= 25) { threatLevel = 'CRITICAL'; threatColor = 'danger'; }
+            else if (totalScore >= 15) { threatLevel = 'HIGH'; threatColor = 'danger'; }
+            else if (totalScore >= 5) { threatLevel = 'MEDIUM'; threatColor = 'warning'; }
+            else if (totalScore > 0) { threatLevel = 'LOW'; threatColor = 'info'; }
+            else { threatLevel = 'Minimal'; threatColor = 'success'; }
+
+            let resultHTML = `--- Advanced Analysis Report ---\n`;
+            resultHTML += `Overall Threat Score: <span class="${threatColor}" style="font-size: 1.2em; font-weight: bold;">${totalScore}</span>\n`;
+            resultHTML += `Assessed Threat Level: <span class="${threatColor}" style="font-size: 1.2em; font-weight: bold;">${threatLevel}</span>\n\n`;
+
+            if (threats.length > 0) {
+                resultHTML += `--- Correlated Threats Detected ---\n`;
+                threats.forEach(t => {
+                    const riskColor = t.risk === 'CRITICAL' || t.risk === 'High' ? 'danger' : 'warning';
+                    resultHTML += `<span class="${riskColor}">[${t.risk}] ${t.name} (Score: ${t.score})</span>\n`;
+                    resultHTML += `  > ${t.details}\n`;
+                });
+                aiBtn.style.display = 'flex';
+            } else {
+                resultHTML += `<span class="success">- No significant correlated threats detected.</span>`;
+            }
+
+            output.innerHTML = resultHTML;
+            const riskDistribution = threats.reduce((acc, t) => {
+                const risk = t.risk.toUpperCase();
+                acc[risk] = (acc[risk] || 0) + 1;
+                return acc;
+            }, {});
+
+            analysisResults.network = { risk: threatLevel, threats, score: totalScore, lines: lines.length, riskDistribution, allEvents: events };
+            addCoCEntry('Advanced Log Scan Complete', `${lines.length} lines`, threatLevel.toLowerCase(), `Threat score: ${totalScore}. Found ${threats.length} correlated threats.`);
+        }
+
+
+        async function getNetworkAIInsights() {
+            if (!analysisResults.network || !analysisResults.network.threats || analysisResults.network.threats.length === 0) {
+                alert("Please run an advanced analysis that detects threats first.");
+                return;
+            }
+
+            const aiBtn = document.getElementById('net-ai-btn');
+            aiBtn.disabled = true;
+            aiBtn.innerHTML = `<div class="loading-spinner" style="width: 1em; height: 1em; border-width: 2px;"></div>`;
+
+            const threatsForPrompt = analysisResults.network.threats.map(t => `- ${t.name} (Risk: ${t.risk}): ${t.details}`).join('\n');
+            const prompt = `As a senior cybersecurity analyst, my advanced log analysis engine detected the following correlated threats. Please provide a concise, expert explanation of what these findings mean collectively. What is the likely attack scenario? What are the immediate, actionable recommendations for a forensic investigator? Be direct and clear.\n\nDetected Threats:\n${threatsForPrompt}`;
+            
+            const aiResponse = await callGemini(prompt);
+
+            const output = document.getElementById('network-output');
+            const interpretationDiv = document.createElement('div');
+            interpretationDiv.className = 'interpretation';
+            interpretationDiv.innerHTML = `<strong>✨ AI Explanation:</strong><br>${aiResponse.replace(/\n/g, '<br>')}`;
+            output.appendChild(interpretationDiv);
+
+            aiBtn.disabled = false;
+            aiBtn.innerHTML = `✨ Explain Threats with AI`;
+        }
+
+
+        // --- PROFESSIONAL PDF REPORTING ENGINE (ENHANCED v7.4) ---
+        async function exportToPDF() {
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+                
+                const caseInfo = {
+                    caseName: document.getElementById('case-name').value || "Unnamed Case",
+                    investigatorName: document.getElementById('investigator-name').value || "N/A",
+                    orgName: document.getElementById('org-name').value || "N/A",
+                    caseType: document.getElementById('case-type').value || "N/A",
+                    pdfPassword: document.getElementById('pdf-password').value,
+                    isCourtMode: document.getElementById('court-mode').checked,
+                    version: "N.I.T.T.A.L.A. v7.4",
+                    sessionId: analysisResults.sessionId
+                };
+
+                // NEW: PDFReportBuilder class encapsulates all PDF creation logic.
+                class PDFReportBuilder {
+                    constructor(doc, caseInfo) {
+                        this.doc = doc;
+                        this.caseInfo = caseInfo;
+                        this.yPos = 0;
+                        this.margin = 20;
+                        this.pageWidth = doc.internal.pageSize.getWidth();
+                        this.pageHeight = doc.internal.pageSize.getHeight();
+                        this.toc = [];
+                    }
+
+                    // --- Core PDF Building Blocks ---
+                    addPage() {
+                        this.doc.addPage();
+                        this.yPos = this.margin;
+                        this.addHeaders();
+                    }
+                    
+                    addHeaders() {
+                        const pageNum = this.doc.internal.getNumberOfPages();
+                        this.doc.setPage(pageNum);
+                        this.doc.setFont('helvetica', 'normal').setFontSize(9).setTextColor(80, 80, 80);
+                        this.doc.text(`Digital Forensic Report | Case: ${this.caseInfo.caseName}`, this.margin, 12);
+                        this.doc.text(`Page ${pageNum}`, this.pageWidth - this.margin, 12, { align: 'right' });
+                        this.doc.setDrawColor(220).line(this.margin, 15, this.pageWidth - this.margin, 15);
+                        this.doc.setFont('helvetica', 'normal').setFontSize(8).setTextColor(80, 80, 80);
+                        this.doc.text(`Report by ${this.caseInfo.investigatorName}`, this.margin, this.pageHeight - 10);
+                        this.doc.text(`Generated by ${this.caseInfo.version}`, this.pageWidth - this.margin, this.pageHeight - 10, { align: 'right' });
+                    }
+                    
+                    addWatermark() {
+                        const pageCount = this.doc.internal.getNumberOfPages();
+                        for (let i = 1; i <= pageCount; i++) {
+                            this.doc.setPage(i);
+                            this.doc.saveGraphicsState();
+                            this.doc.setGState(new this.doc.GState({opacity: 0.08}));
+                            this.doc.setFont('helvetica', 'bold');
+                            this.doc.setFontSize(this.caseInfo.isCourtMode ? 80 : 100);
+                            this.doc.setTextColor(0, 0, 0);
+                            const watermarkText = this.caseInfo.isCourtMode ? "FOR COURT USE ONLY" : "N.I.T.T.A.L.A";
+                            this.doc.text(watermarkText, this.pageWidth / 2, this.pageHeight / 1.8, { angle: -45, align: 'center' });
+                            this.doc.restoreGraphicsState();
+                        }
+                    }
+
+                    checkPageBreak(elementHeight) {
+                        if (this.yPos + elementHeight > this.pageHeight - (this.margin + 5)) {
+                            this.addPage();
+                        }
+                    }
+
+                    addTitle(title, level = 1, toc = true) {
+                        const fontSize = level === 1 ? 18 : (level === 2 ? 14 : 12);
+                        const elementHeight = (fontSize * 0.7) + (level === 1 ? 8 : 6);
+                        this.checkPageBreak(elementHeight);
+                        this.doc.setFont('helvetica', 'bold').setFontSize(fontSize).setTextColor(30, 50, 100);
+                        this.doc.text(title, this.margin, this.yPos);
+                        if(toc) this.toc.push({ title, page: this.doc.internal.getNumberOfPages(), y: this.yPos, level });
+                        this.yPos += elementHeight;
+                    }
+
+                    addText(text) {
+                        const splitText = this.doc.splitTextToSize(text, this.pageWidth - this.margin * 2);
+                        const textHeight = this.doc.getTextDimensions(splitText).h + 5;
+                        this.checkPageBreak(textHeight);
+                        this.doc.setFont('helvetica', 'normal').setFontSize(11).setTextColor(0,0,0);
+                        this.doc.text(splitText, this.margin, this.yPos, { lineHeightFactor: 1.5 });
+                        this.yPos += textHeight;
+                    }
+
+                    addTable(head, body, columnStyles = {}) {
+                        const tableHeight = (body.length + 1) * 10 + 10;
+                        this.checkPageBreak(tableHeight);
+                        this.doc.autoTable({
+                            startY: this.yPos,
+                            head: [head],
+                            body: body,
+                            theme: 'grid',
+                            headStyles: { fillColor: [30, 50, 100] },
+                            styles: { cellPadding: 2, fontSize: 9 },
+                            columnStyles: columnStyles
+                        });
+                        this.yPos = this.doc.autoTable.previous.finalY + 10;
+                    }
+                    
+                    // --- Report Section Builders ---
+
+                    addCoverPage() {
+                        this.yPos = 60;
+                        this.doc.setFont('helvetica', 'bold').setFontSize(26).setTextColor(30, 50, 100).text("Digital Forensic Examination Report", this.pageWidth / 2, this.yPos, { align: 'center' });
+                        this.yPos += 10;
+                        this.doc.setFont('helvetica', 'normal').setFontSize(14).setTextColor(80, 80, 80).text(this.caseInfo.version, this.pageWidth / 2, this.yPos, { align: 'center' });
+                        this.yPos += 25;
+                        this.doc.autoTable({
+                            startY: this.yPos, theme: 'plain', styles: { font: 'helvetica', fontSize: 11, cellPadding: 5 },
+                            body: [
+                                [{content: 'Case ID / Name:', styles:{fontStyle:'bold', cellWidth: 50}}, this.caseInfo.caseName],
+                                [{content: 'Case Type:', styles:{fontStyle:'bold', cellWidth: 50}}, this.caseInfo.caseType],
+                                [{content: 'Organization:', styles:{fontStyle:'bold', cellWidth: 50}}, this.caseInfo.orgName],
+                                [{content: 'Lead Investigator:', styles:{fontStyle:'bold', cellWidth: 50}}, this.caseInfo.investigatorName],
+                                [{content: 'Report Date:', styles:{fontStyle:'bold', cellWidth: 50}}, new Date().toUTCString()],
+                            ]
+                        });
+                    }
+
+                    addTableOfContents() {
+                        this.addPage();
+                        const tocStartY = this.yPos;
+                        this.addTitle("Table of Contents", 1, false);
+                        
+                        this.toc.forEach(item => {
+                            this.doc.setFont('helvetica', 'normal').setFontSize(11).setTextColor(0, 0, 200);
+                            const indent = (item.level - 1) * 5;
+                            this.doc.textWithLink(item.title, this.margin + indent, this.yPos, { pageNumber: item.page, y: item.y });
+                            const textWidth = this.doc.getTextWidth(item.title);
+                            this.doc.setFont('helvetica', 'normal').setFontSize(11).setTextColor(0,0,0);
+                            this.doc.text(`${item.page}`, this.pageWidth - this.margin, this.yPos, { align: 'right' });
+                            this.yPos += 8;
+                        });
+                    }
+
+                    addExecutiveSummary() {
+                        this.addPage();
+                        this.addTitle("1.0 Executive Summary");
+                        let summaryText = `This report details the forensic findings for Case: ${this.caseInfo.caseName}. The examination was conducted using the ${this.caseInfo.version} toolkit.\n\n`;
+                        if (aiSummaryForReport) summaryText += `AI-Generated Summary:\n"${aiSummaryForReport}"\n\n`;
+                        if (Object.keys(analysisResults).length <= 1) summaryText += "No analyses were performed in this session.";
+                        this.addText(summaryText);
+                    }
+                    
+                    addDetailedFindings() {
+                        this.addPage();
+                        this.addTitle("2.0 Detailed Forensic Findings");
+                        if (Object.keys(analysisResults).length <= 1) {
+                            this.addText("No analysis results to report.");
+                            return;
+                        }
+                        if (analysisResults.fileHash) this.addFileIntegritySection();
+                        if (analysisResults.metadata) this.addMetadataSection();
+                        if (analysisResults.steganography) this.addStegoSection();
+                        if (analysisResults.password) this.addPasswordSection();
+                        if (analysisResults.network) this.addNetworkSection();
+                    }
+
+                    addFileIntegritySection() {
+                        this.addTitle("2.1 File Integrity & Threat Scan", 2);
+                        const res = analysisResults.fileHash;
+                        this.addTable(['Property', 'Value'], [
+                            ['Filename', res.fileName],
+                            ['File Size', `${(res.fileSize / 1024).toFixed(2)} KB`],
+                            ['Identified Type', res.fileType],
+                            ['MD5 Hash', res.hashes.md5],
+                            ['SHA-1 Hash', res.hashes.sha1],
+                            ['SHA-256 Hash', res.hashes.sha256],
+                            ['Shannon Entropy', res.entropy.toFixed(4)],
+                            ['Threat Status', res.isMalicious ? `THREAT: ${res.threatName}` : 'Clean']
+                        ], { 0: { cellWidth: 40 }, 1: { styles: { font: 'courier' } } });
+                    }
+
+                    addMetadataSection() {
+                        this.addTitle("2.2 Metadata Analysis", 2);
+                        const res = analysisResults.metadata;
+                        if (Object.keys(res.keyFindings).length > 0) {
+                            this.addTitle("Key Findings", 3, false);
+                            this.addTable(['Key Finding', 'Value'], Object.entries(res.keyFindings), { 0: { cellWidth: 40 } });
+                        }
+                        this.addTitle("All Extracted Metadata", 3, false);
+                        const allMetaBody = res.data.map(d => [d.group, d.key, d.value]);
+                        this.addTable(['Group', 'Tag', 'Value'], allMetaBody, { 0: { cellWidth: 30 }, 1: { cellWidth: 40 } });
+                    }
+                    
+                    addStegoSection() {
+                        this.addTitle("2.3 Steganography Analysis", 2);
+                        const res = analysisResults.steganography;
+                        this.addTable(['Property', 'Value'], [
+                            ['Filename', res.fileName],
+                            ['Analysis Method', res.method],
+                            ['LSB Alpha Entropy', res.entropy],
+                            ['Result', res.found ? 'High probability of hidden data' : 'No evidence found']
+                        ], { 0: { cellWidth: 50 } });
+                    }
+                    
+                    addPasswordSection() {
+                        this.addTitle("2.4 Password Audit", 2);
+                        const res = analysisResults.password;
+                        this.addTable(['Metric', 'Result'], [
+                            ['Strength', res.strength],
+                            ['Entropy', `${res.entropyBits} bits`],
+                            ['Estimated Crack Time', res.timeToCrack],
+                            ['Breach Status (Simulated)', res.isBreached ? 'COMPROMISED' : 'Clean'],
+                            ['Recommendations', res.suggestions.join('\n')]
+                        ], { 0: { cellWidth: 50 } });
+                    }
+
+                    async addNetworkSection() {
+                        this.addTitle("2.5 Network Log Analysis", 2);
+                        const res = analysisResults.network;
+                        this.addTable(['Metric', 'Value'], [
+                            ['Lines Analyzed', res.lines],
+                            ['Overall Threat Score', res.score],
+                            ['Assessed Threat Level', res.risk],
+                            ['Correlated Threats Found', res.threats.length],
+                        ], { 0: { cellWidth: 50 } });
+                        
+                        if (res.threats.length > 0) {
+                            this.addTitle("Correlated Threats", 3, false);
+                            const threatsBody = res.threats.map(t => [t.risk, t.name, t.details]);
+                            this.addTable(['Risk', 'Threat Name', 'Details'], threatsBody, { 0: { cellWidth: 25 }, 1: { cellWidth: 45 } });
+                        }
+
+                        if (res.riskDistribution && Object.keys(res.riskDistribution).length > 0) {
+                            this.addTitle("Risk Distribution Chart", 3, false);
+                            const chartImage = await this.generateChartAsImage(res.riskDistribution);
+                            this.checkPageBreak(50);
+                            this.doc.addImage(chartImage, 'PNG', this.margin + 40, this.yPos, 80, 40);
+                            this.yPos += 50;
+                        }
+                    }
+
+                    addChainOfCustodySection() {
+                        this.addPage();
+                        this.addTitle("3.0 Chain of Custody Log");
+                        const cocBody = chainOfCustody.map(act => [act.time, act.action, act.target, act.status.toUpperCase()]).reverse();
+                        this.addTable(['Time', 'Action', 'Target', 'Status'], cocBody);
+                    }
+
+                    addAttestationSection() {
+                        this.addPage();
+                        this.addTitle("4.0 Investigator's Attestation");
+                        const attestText = "I, the undersigned, attest that the information contained within this report is accurate to the best of my knowledge and that all procedures were conducted in a forensically sound manner.";
+                        this.addText(attestText);
+                        this.yPos += 30;
+                        this.doc.setDrawColor(100).line(this.margin, this.yPos, this.margin + 80, this.yPos);
+                        this.yPos += 5;
+                        this.doc.text(`Signature: ${this.caseInfo.investigatorName}`, this.margin, this.yPos);
+                    }
+                    
+                    generateChartAsImage(chartData) {
+                        return new Promise(resolve => {
+                            const canvas = document.getElementById('chart-canvas');
+                            const ctx = canvas.getContext('2d');
+                            if (canvas.chart) { canvas.chart.destroy(); }
+                            
+                            const labels = Object.keys(chartData);
+                            const data = Object.values(chartData);
+                            const colors = { 'CRITICAL': '#EF4444', 'HIGH': '#F59E0B', 'MEDIUM': '#3F83F8', 'LOW': '#10B981' };
+                            const backgroundColors = labels.map(label => colors[label] || '#B0B9C3');
+
+                            canvas.chart = new Chart(ctx, {
+                                type: 'doughnut',
+                                data: { labels: labels, datasets: [{ label: 'Risk Distribution', data: data, backgroundColor: backgroundColors, borderWidth: 1 }] },
+                                options: { responsive: false, animation: { onComplete: () => { resolve(canvas.toDataURL('image/png')); } }, plugins: { legend: { position: 'right' } } }
+                            });
+                        });
+                    }
+                    
+                    async build() {
+                        // --- Build Document ---
+                        this.addCoverPage();
+                        
+                        // --- Build Content Pages ---
+                        this.addExecutiveSummary();
+                        this.addDetailedFindings();
+                        this.addChainOfCustodySection();
+                        this.addAttestationSection();
+                        
+                        // --- Finalize: Build TOC, Watermark, and Headers ---
+                        const totalPages = this.doc.internal.getNumberOfPages();
+                        this.addTableOfContents();
+                        this.addWatermark();
+
+                        // Re-add headers to all pages to ensure they are on top of the watermark
+                        for (let i = 1; i <= totalPages + 1; i++) {
+                            this.doc.setPage(i);
+                            this.addHeaders();
+                        }
+                    }
+                }
+
+                const builder = new PDFReportBuilder(doc, caseInfo);
+                await builder.build();
+
+                doc.setProperties({
+                    title: `Forensic Report: ${caseInfo.caseName}`,
+                    subject: `Digital evidence analysis for case ${caseInfo.caseName}`,
+                    author: caseInfo.investigatorName,
+                    keywords: `forensic, report, ${caseInfo.caseType}, ${caseInfo.sessionId}`,
+                    creator: caseInfo.version
+                });
+
+                addCoCEntry('Report Exported', `${caseInfo.caseName}.pdf`, 'low', `Secure PDF report generated.`);
+                doc.save(`NITTALA-Report-${caseInfo.caseName}.pdf`, { encryption: { userPassword: caseInfo.pdfPassword, ownerPassword: caseInfo.pdfPassword, permissions: ["print", "copy"] }});
+            
+            } catch (e) {
+                console.error("PDF Generation Error:", e);
+                alert("Failed to generate PDF. Check console for details.");
+            }
+        }
+        
+        // --- SESSION & CoC ---
+        function addCoCEntry(action, target, status, details) {
+            const entry = { 
+                id: Date.now(), 
+                action, 
+                target, 
+                status, 
+                details: `${details} (Session: ${analysisResults.sessionId})`, 
+                time: new Date().toLocaleTimeString('en-US', { hour12: false }) 
+            };
+            chainOfCustody.unshift(entry);
+            if (chainOfCustody.length > 100) chainOfCustody.pop();
+            renderCoC();
+        }
+
+        function renderCoC() {
+            const container = document.getElementById('coc-log');
+            if (!container) return;
+            container.innerHTML = '';
+            chainOfCustody.forEach(entry => {
+                const el = document.createElement('div');
+                el.className = 'coc-entry';
+                el.onclick = () => showCoCDetails(entry.id);
+                el.innerHTML = `
+                    <div class="coc-info">
+                        <span class="coc-status status-${entry.status}"></span>
+                        <span>${entry.action}</span>
+                    </div>
+                    <span class="coc-time">${entry.time}</span>`;
+                container.appendChild(el);
+            });
+        }
+        
+        function showCoCDetails(id) {
+            const entry = chainOfCustody.find(e => e.id === id);
+            if (!entry) return;
+            document.getElementById('modal-title').textContent = `${entry.action} Details`;
+            document.getElementById('modal-body').textContent = `Action:   ${entry.action}\nTarget:   ${entry.target}\nStatus:   ${entry.status.toUpperCase()}\nTime:     ${entry.time}\n\nDetails:\n${entry.details}`;
+            document.getElementById('coc-modal').classList.add('active');
+        }
+        
+        function closeModal() { document.getElementById('coc-modal').classList.remove('active'); }
+    </script>
+</body>
+</html>
